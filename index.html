@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Game Searching — Linear & Binary</title>
+<style>
+  :root{
+    --bg1:#0e6ffb;
+    --bg2:#062f6b;
+    --panel:#ffffff;
+    --text:#0b1b3a;
+    --subtle:#5a77a5;
+    --green:#25c36b;
+    --yellow:#ffd64d;
+    --red:#ff4d4d;
+    --shadow:0 12px 30px rgba(0,0,0,.18);
+    --shadow-soft:0 8px 18px rgba(0,0,0,.12);
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; min-height:100vh;
+    font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+    color:#fff;
+    background: linear-gradient(135deg, var(--bg1), var(--bg2));
+    display:flex; align-items:center; justify-content:center;
+    padding:24px;
+  }
+  .container{
+    width:min(960px, 100%);
+  }
+  .card{
+    background:var(--panel);
+    color:var(--text);
+    border-radius:20px;
+    box-shadow:var(--shadow);
+    padding:24px;
+  }
+  h1{margin:0 0 12px; font-size:28px}
+  .sub{color:var(--subtle); margin-top:4px}
+  .center{display:flex; align-items:center; justify-content:center}
+  .menu-grid{
+    display:grid; grid-template-columns:1fr; gap:12px; margin-top:16px;
+  }
+  .btn{
+    border:none; border-radius:14px; padding:14px 18px; font-weight:700; cursor:pointer;
+    background:#0e6ffb; color:#fff; box-shadow:var(--shadow-soft); transition:transform .05s ease, filter .15s ease;
+  }
+  .btn:hover{filter:brightness(1.05)}
+  .btn:active{transform:translateY(1px)}
+  .btn.secondary{background:#123a86}
+  .btn.ghost{background:#e9f0ff; color:#0b2c86}
+  .row{display:flex; gap:10px; flex-wrap:wrap; align-items:center}
+  .panel{
+    background:#f7f9ff; border-radius:16px; padding:16px; color:#0d244f;
+  }
+
+  /* Game area */
+  .topbar{
+    display:flex; flex-wrap:wrap; gap:10px; align-items:center; justify-content:space-between; margin-bottom:12px;
+  }
+  .pill{
+    background:#e9f0ff; color:#0d244f; border-radius:999px; padding:8px 12px; font-weight:700; display:inline-flex; gap:8px; align-items:center;
+  }
+  .grid{
+    display:grid;
+    grid-template-columns: repeat(auto-fit, minmax(64px, 1fr));
+    gap:10px;
+  }
+  .box{
+    background:var(--green);
+    border-radius:12px;
+    padding:14px 0;
+    text-align:center;
+    font-weight:800;
+    color:#0d3b2a;
+    position:relative;
+    box-shadow:var(--shadow-soft);
+    transition: transform .15s ease, background .2s ease;
+    user-select:none;
+  }
+  .box.highlight{ background: var(--yellow); color:#553900; transform:scale(1.04); }
+  .box.found{ background: var(--red); color:#fff; animation: pulse 800ms ease-in-out 1; }
+  @keyframes pulse{
+    0%{transform:scale(1)}
+    50%{transform:scale(1.08)}
+    100%{transform:scale(1)}
+  }
+
+  .controls{ display:flex; gap:10px; flex-wrap:wrap; margin-top:14px }
+  .note{ font-size:14px; color:#395b9b }
+
+  /* Timer */
+  .timer-wrap{ background:#e9efff; border-radius:10px; height:10px; overflow:hidden; }
+  .timer-bar{ background:#0e6ffb; height:100%; width:100%; transition:width .2s linear; }
+
+  /* Result */
+  .result-title{ font-size:26px; margin:0 0 6px }
+  .scoreboard{ display:flex; gap:12px; flex-wrap:wrap }
+  .score{
+    background:#0e6ffb; color:#fff; padding:12px 14px; border-radius:12px; font-weight:800;
+    box-shadow:var(--shadow-soft);
+  }
+  .credits{
+    position:fixed; right:10px; bottom:10px; font-size:12px; color:#d7e5ff; opacity:.9; user-select:none;
+  }
+  .link{
+    text-decoration:underline; color:#0e6ffb; cursor:pointer;
+  }
+
+  /* Responsive */
+  @media (min-width: 720px){
+    .menu-grid{ grid-template-columns:1fr 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+  <div class="container">
+    <!-- MENU -->
+    <section id="menu" class="card">
+      <h1>🎮 Game Searching</h1>
+      <div class="sub">Belajar berpikir komputasional lewat simulasi <b>Linear Search</b> & <b>Binary Search</b>.</div>
+
+      <div class="menu-grid">
+        <button class="btn" id="startLinear">Mulai Linear Search</button>
+        <button class="btn" id="startBinary">Mulai Binary Search</button>
+        <button class="btn secondary" id="exitBtn">Keluar</button>
+      </div>
+
+      <div class="panel" style="margin-top:16px">
+        <div class="row">
+          <div class="pill">Aturan Main</div>
+        </div>
+        <ul style="margin-top:8px; color:#1a2f60; line-height:1.6">
+          <li>Komputer membuat array angka (untuk Binary akan diurutkan).</li>
+          <li>Target dipilih <b>acak dari array</b> (dijamin ada).</li>
+          <li>Kamu menekan <b>Langkah Berikutnya</b> untuk menjalankan algoritma.</li>
+          <li>Kotak yang sedang dicek: <b>kuning</b>, ditemukan: <b>merah</b> (dengan animasi).</li>
+          <li>Ada <b>timer</b> per langkah — habis waktu = <b>kalah</b>.</li>
+          <li>Menang ➜ skor +1. Kalah ➜ skor kembali 0. Tersimpan juga <b>Best Score</b>.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- GAME -->
+    <section id="game" class="card" style="display:none">
+      <div class="topbar">
+        <div class="row">
+          <div class="pill">Mode: <span id="modeLabel">Linear</span></div>
+          <div class="pill">Target: <span id="targetLabel">?</span></div>
+          <div class="pill">Langkah: <span id="stepLabel">0</span></div>
+        </div>
+        <div class="scoreboard">
+          <div class="score">Skor: <span id="score">0</span></div>
+          <div class="score" style="background:#123a86">Best: <span id="best">0</span></div>
+        </div>
+      </div>
+
+      <div class="panel" style="margin-bottom:12px">
+        <div class="note">Timer langkah (habis = kalah)</div>
+        <div class="timer-wrap" style="margin-top:8px">
+          <div id="timerBar" class="timer-bar"></div>
+        </div>
+      </div>
+
+      <div id="arrayGrid" class="grid" aria-live="polite"></div>
+
+      <div class="controls">
+        <button class="btn" id="nextBtn">⏭️ Langkah Berikutnya</button>
+        <button class="btn ghost" id="autoBtn" aria-pressed="false">▶️ Otomatis: OFF</button>
+        <button class="btn secondary" id="backToMenuBtn">⟲ Kembali</button>
+      </div>
+
+      <div class="panel" style="margin-top:12px">
+        <div class="note" id="explain">Penjelasan langkah akan muncul di sini.</div>
+      </div>
+    </section>
+
+    <!-- RESULT -->
+    <section id="result" class="card center" style="display:none; text-align:center;">
+      <div>
+        <h2 id="resultTitle" class="result-title">Hasil</h2>
+        <p id="resultMsg" class="sub"></p>
+        <div class="row center" style="margin-top:14px">
+          <button class="btn" id="againBtn">Main Lagi</button>
+          <button class="btn secondary" id="resultMenuBtn">Menu Utama</button>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- Credits -->
+  <div class="credits">Game By. Sakti Isnan Herlambang X8 SMAN 2 Mejayan</div>
+
+<script>
+(function(){
+  // --- State ---
+  const SIZE = 12;                 // panjang array
+  const RANGE = [1, 99];           // rentang angka
+  const STEP_TIME = 7000;          // ms per langkah (habis waktu => kalah)
+  let mode = "Linear";             // "Linear" | "Binary"
+  let arr = [];
+  let target = null;
+  let idxLinear = 0;
+  let lo = 0, hi = 0, mid = 0;
+  let step = 0;
+  let foundIndex = -1;
+  let auto = false;
+  let timerStart = 0;
+  let timerId = null;
+  let rafId = null;
+  let score = 0;
+  let best = Number(localStorage.getItem("bestScoreSearchGame") || 0);
+
+  // --- DOM ---
+  const $ = (s)=>document.querySelector(s);
+  const menu = $("#menu"), game = $("#game"), result = $("#result");
+  const modeLabel = $("#modeLabel"), targetLabel = $("#targetLabel"), stepLabel=$("#stepLabel");
+  const arrayGrid = $("#arrayGrid");
+  const explain = $("#explain");
+  const timerBar = $("#timerBar");
+  const nextBtn = $("#nextBtn"), autoBtn=$("#autoBtn");
+  const backBtn = $("#backToMenuBtn");
+  const scoreEl = $("#score"), bestEl=$("#best");
+  const resultTitle = $("#resultTitle"), resultMsg=$("#resultMsg");
+
+  // --- Helpers ---
+  function randInt(a,b){ return Math.floor(Math.random()*(b-a+1))+a; }
+  function generateArray(){
+    const s = new Set();
+    while(s.size<SIZE) s.add(randInt(RANGE[0], RANGE[1]));
+    return Array.from(s);
+  }
+  function drawArray(highlight=-1, found=-1, extraInfo={}){
+    arrayGrid.innerHTML = "";
+    arr.forEach((v,i)=>{
+      const d = document.createElement("div");
+      d.className="box";
+      if(i===highlight) d.classList.add("highlight");
+      if(i===found) d.classList.add("found");
+      d.textContent = v;
+      // for binary, show indices/lo/hi/mid tips
+      if(mode==="Binary"){
+        d.style.outline = (i===extraInfo.lo || i===extraInfo.hi || i===extraInfo.mid) ? "3px solid rgba(14,111,251,.35)" : "none";
+      }
+      arrayGrid.appendChild(d);
+    });
+  }
+  function setExplain(text){ explain.textContent = text; }
+
+  function swapView(show){
+    menu.style.display = show==="menu" ? "" : "none";
+    game.style.display = show==="game" ? "" : "none";
+    result.style.display = show==="result" ? "" : "none";
+  }
+
+  function resetTimer(){
+    if(timerId) { clearTimeout(timerId); timerId=null; }
+    if(rafId) { cancelAnimationFrame(rafId); rafId=null; }
+    timerStart = performance.now();
+    timerBar.style.width = "100%";
+    function tick(now){
+      const elapsed = now - timerStart;
+      const left = Math.max(0, 1 - (elapsed/STEP_TIME));
+      timerBar.style.width = (left*100).toFixed(2) + "%";
+      if(left>0){
+        rafId = requestAnimationFrame(tick);
+      }
+    }
+    rafId = requestAnimationFrame(tick);
+    timerId = setTimeout(()=> lose("Waktu habis sebelum langkah selesai."), STEP_TIME);
+  }
+
+  function stopTimer(){
+    if(timerId) clearTimeout(timerId);
+    if(rafId) cancelAnimationFrame(rafId);
+    timerId = null; rafId = null;
+    timerBar.style.width = "0%";
+  }
+
+  function updateScores(win){
+    if(win){
+      score += 1;
+      if(score>best){ best=score; localStorage.setItem("bestScoreSearchGame", String(best)); }
+    }else{
+      score = 0;
+    }
+    scoreEl.textContent = score;
+    bestEl.textContent = best;
+  }
+
+  // --- Game setup ---
+  function startGame(selectedMode){
+    mode = selectedMode;
+    modeLabel.textContent = mode;
+    step = 0; stepLabel.textContent = step;
+    arr = generateArray();
+    if(mode==="Binary") arr.sort((a,b)=>a-b);
+    target = arr[randInt(0, arr.length-1)]; // dijamin ada
+    targetLabel.textContent = target;
+    foundIndex = -1;
+    idxLinear = 0;
+    lo = 0; hi = arr.length - 1; mid = Math.floor((lo+hi)/2);
+    auto = false; autoBtn.setAttribute("aria-pressed","false"); autoBtn.textContent="▶️ Otomatis: OFF";
+    drawArray(-1,-1,{lo,hi,mid});
+    setExplain("Tekan “Langkah Berikutnya” untuk memulai pencarian.");
+    swapView("game");
+    resetTimer();
+  }
+
+  function win(){
+    stopTimer();
+    updateScores(true);
+    resultTitle.textContent = "🎉 Menang!";
+    resultMsg.textContent = `Angka ${target} ditemukan dalam ${step} langkah dengan ${mode} Search.`;
+    swapView("result");
+  }
+
+  function lose(reason="Kalah."){
+    stopTimer();
+    updateScores(false);
+    resultTitle.textContent = "💥 Kalah";
+    resultMsg.textContent = reason + " Skor direset ke 0.";
+    swapView("result");
+  }
+
+  // --- Steps ---
+  function stepLinear(){
+    if(foundIndex!==-1) return;
+    if(idxLinear>=arr.length){
+      // seharusnya tidak terjadi karena target dijamin ada
+      return lose("Target tidak ditemukan (seharusnya ada).");
+    }
+    step++; stepLabel.textContent = step;
+    const i = idxLinear;
+    drawArray(i,-1);
+    setExplain(`Linear Search membandingkan elemen indeks ${i} dengan target ${target}.`);
+    // periksa
+    if(arr[i]===target){
+      drawArray(-1,i);
+      setExplain(`Cocok! arr[${i}] = ${arr[i]} sama dengan ${target}.`);
+      foundIndex = i;
+      setTimeout(win, 450);
+      return;
+    }else{
+      setExplain(`Belum cocok: ${arr[i]} ≠ ${target}. Lanjut ke indeks berikutnya.`);
+      idxLinear++;
+      resetTimer();
+      if(auto) setTimeout(stepLinear, 600);
+    }
+  }
+
+  function stepBinary(){
+    if(foundIndex!==-1) return;
+    if(lo>hi){
+      // mustahil karena target dijamin ada, tapi handle saja
+      return lose("Rentang kosong pada Binary Search, target tidak ditemukan.");
+    }
+    step++; stepLabel.textContent = step;
+    mid = Math.floor((lo+hi)/2);
+    drawArray(mid,-1,{lo,hi,mid});
+    setExplain(`Binary Search memeriksa tengah: indeks ${mid}, nilai ${arr[mid]}.`);
+    if(arr[mid]===target){
+      drawArray(-1,mid,{lo,hi,mid});
+      setExplain(`Cocok! arr[${mid}] = ${arr[mid]} adalah target ${target}.`);
+      foundIndex = mid;
+      setTimeout(win, 450);
+      return;
+    }else if(arr[mid] < target){
+      setExplain(`${arr[mid]} < ${target}. Fokus ke sisi kanan (lo = mid+1).`);
+      lo = mid + 1;
+      resetTimer();
+      if(auto) setTimeout(stepBinary, 700);
+    }else{
+      setExplain(`${arr[mid]} > ${target}. Fokus ke sisi kiri (hi = mid-1).`);
+      hi = mid - 1;
+      resetTimer();
+      if(auto) setTimeout(stepBinary, 700);
+    }
+  }
+
+  function doStep(){
+    if(mode==="Linear") stepLinear();
+    else stepBinary();
+  }
+
+  // --- Events ---
+  $("#startLinear").addEventListener("click", ()=> startGame("Linear"));
+  $("#startBinary").addEventListener("click", ()=> startGame("Binary"));
+  $("#exitBtn").addEventListener("click", ()=>{
+    // Tampilan keluar sederhana
+    menu.innerHTML = `
+      <div class="card" style="text-align:center">
+        <h1>Terima kasih sudah bermain! 👋</h1>
+        <p class="sub">Kamu bisa menutup tab ini atau <span class="link" id="backLink">kembali ke menu</span>.</p>
+      </div>`;
+    const link = document.querySelector("#backLink");
+    link && link.addEventListener("click", ()=> location.reload());
+  });
+
+  nextBtn.addEventListener("click", ()=>{
+    // tombol manual juga me-reset timer (mulai hitung untuk langkah berikutnya)
+    doStep();
+  });
+
+  autoBtn.addEventListener("click", ()=>{
+    auto = !auto;
+    autoBtn.setAttribute("aria-pressed", String(auto));
+    autoBtn.textContent = auto ? "⏸️ Otomatis: ON" : "▶️ Otomatis: OFF";
+    if(auto) doStep();
+  });
+
+  backBtn.addEventListener("click", ()=>{
+    stopTimer();
+    swapView("menu");
+  });
+
+  $("#againBtn").addEventListener("click", ()=>{
+    swapView("menu");
+  });
+  $("#resultMenuBtn").addEventListener("click", ()=>{
+    swapView("menu");
+  });
+
+  // Init scoreboard
+  scoreEl.textContent = score;
+  bestEl.textContent = best;
+
+})();
+</script>
+</body>
+</html>
